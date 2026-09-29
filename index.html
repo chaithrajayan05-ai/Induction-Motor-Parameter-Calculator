@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Induction Motor Parameter Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+color-scheme:light;--bg:#ffffff;--panel:#ffffff;--ink:#16202b;--mute:#5d6b7a;--line:#d3dae3;--accent:#1f6fb8;--field:#f5f7fa;--grid:rgba(0,0,0,.09);--err:#b3261e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:18px 20px 6px}
+h1{margin:0;font-size:1.35rem;letter-spacing:.01em;color:var(--accent)}
+header p{margin:2px 0 0;color:var(--mute);font-size:.86rem}
+main{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:14px;padding:12px 20px 24px;max-width:1300px;margin:0 auto}
+@media (max-width:860px){main{grid-template-columns:1fr;padding:10px 12px 20px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+fieldset{border:0;margin:0 0 10px;padding:0}
+legend{font-weight:650;color:var(--accent);padding:0 0 6px;font-size:.95rem}
+.row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin:5px 0}
+.row label{color:var(--mute);font-size:.88rem}
+input,select{width:100%;font:inherit;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:flex;gap:14px;font-size:.9rem}.seg label{display:flex;gap:5px;align-items:center;color:var(--ink)}.seg input{width:auto}
+.btns{display:flex;gap:8px;margin-top:8px}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:8px 14px}
+button.p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;flex:1}
+#err{color:var(--err);min-height:1.3em;font-size:.85rem;margin-top:8px}
+.tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--mute);padding:8px 14px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--accent);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td{padding:6px 8px;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+tr.g td{background:var(--field);color:var(--accent);font-weight:650}
+.u{color:var(--mute);font-size:.8em}
+svg{width:100%;height:auto;display:block;max-height:420px}
+svg text{fill:var(--ink);stroke:none;font-family:Georgia,"Times New Roman",serif;font-style:italic}
+svg .v{fill:var(--mute);font:12px ui-monospace,Menlo,Consolas,monospace;font-style:normal}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:700px){.charts{grid-template-columns:1fr}}
+.charts div{position:relative;height:240px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>Induction Motor Parameter Calculator</h1><p>No-load and blocked-rotor tests on a 3-phase induction motor</p></header>
+<main>
+<section class="card" aria-label="Inputs">
+<fieldset><legend>No-load test</legend>
+<div class="row"><label for="vo">Voltage Vo (V)</label><input id="vo" value="415"></div>
+<div class="row"><label for="io">Current Io (A)</label><input id="io" value="1.9"></div>
+<div class="row"><label for="wo">Power Wo (W)</label><input id="wo" value="180"></div>
+<div class="row"><label for="no">Speed N (RPM)</label><input id="no" value="1499"></div></fieldset>
+<fieldset><legend>Blocked-rotor test</legend>
+<div class="row"><label for="vsc">Voltage Vsc (V)</label><input id="vsc" value="95"></div>
+<div class="row"><label for="isc">Current Isc (A)</label><input id="isc" value="4.7"></div>
+<div class="row"><label for="wsc">Power Wsc (W)</label><input id="wsc" value="500"></div></fieldset>
+<fieldset><legend>Stator data and settings</legend>
+<div class="row"><label>Connection</label><div class="seg"><label><input type="radio" name="conn" value="Star"> Star</label><label><input type="radio" name="conn" value="Delta" checked> Delta</label></div></div>
+<div class="row"><label for="r_dc">DC resistance / phase (Ω)</label><input id="r_dc" value="8.45"></div>
+<div class="row"><label for="slip_pct">Operating slip (%)</label><input id="slip_pct" value="5"></div>
+<div class="row"><label for="freq">Frequency (Hz)</label><select id="freq"><option>50</option><option>60</option></select></div></fieldset>
+<div class="btns"><button class="p" id="calc">Calculate</button><button id="clear">Clear</button></div>
+<div id="err" role="alert"></div>
+</section>
+<section class="card" aria-label="Results">
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-t="t1">Results table</button><button role="tab" aria-selected="false" data-t="t2">Equivalent circuit</button><button role="tab" aria-selected="false" data-t="t3">Performance graphs</button></div>
+<div id="t1"><table id="res"></table></div>
+<div id="t2" hidden><svg id="ckt" viewBox="0 0 640 300" role="img" aria-label="Per-phase equivalent circuit"></svg></div>
+<div id="t3" hidden><div class="charts"><div><canvas id="c1"></canvas></div><div><canvas id="c2"></canvas></div><div><canvas id="c3"></canvas></div><div><canvas id="c4"></canvas></div></div></div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const DEF={vo:415,io:1.9,wo:180,no:1499,vsc:95,isc:4.7,wsc:500,r_dc:8.45,slip_pct:5};
+const F=["vo","io","wo","no","vsc","isc","wsc","r_dc","slip_pct"];
+const LBL={vo:"No-load voltage (Vo)",io:"No-load current (Io)",wo:"No-load power (Wo)",no:"No-load speed (N)",vsc:"Blocked-rotor voltage (Vsc)",isc:"Blocked-rotor current (Isc)",wsc:"Blocked-rotor power (Wsc)",r_dc:"DC resistance",slip_pct:"Slip (%)"};
+
+function calc(p,conn,slipPct,f){
+  const S3=Math.sqrt(3),{vo,io,wo,no,vsc,isc,wsc,r_dc}=p;
+  const std=f<=55?[3000,1500,1000,750,600,500]:[3600,1800,1200,900,720,600];
+  let ns=std[0];for(const s of std){if(s>no)ns=s;else break}
+  const poles=Math.round(120*f/ns);
+  const star=conn==="Star",vf=star?1/S3:1,i_f=star?1:1/S3;
+  let cp0=Math.min(1,Math.max(0,wo/(S3*vo*io)));const sp0=Math.sin(Math.acos(cp0));
+  const vpn=vo*vf,ipn=io*i_f,iw=ipn*cp0,im=ipn*sp0;
+  const rm=iw>0?vpn/iw:Infinity,xm=im>0?vpn/im:Infinity;
+  const r1=1.5*r_dc,vpb=vsc*vf,ipb=isc*i_f;
+  const ro1=ipb>0?(wsc/3)/(ipb*ipb):0,zo1=ipb>0?vpb/ipb:0,r2=ro1-r1;
+  const xo1=zo1>=ro1?Math.sqrt(zo1*zo1-ro1*ro1):0,x1=xo1/2,x2=xo1/2;
+  let s=slipPct/100;if(s<=0)s=0.001;
+  const rl=r2*(1-s)/s,zr=ro1+rl,zm=Math.hypot(zr,xo1),v=vpn;
+  const i2=zm>0?v/zm:0,th=Math.atan2(xo1,zr);
+  const i1r=iw+i2*Math.cos(th),i1i=im+i2*Math.sin(th),i1=Math.hypot(i1r,i1i);
+  const il=star?i1:i1*S3;
+  const cphi=Math.min(1,Math.max(0,i1>0?i1r/i1:1)),N=(1-s)*ns;
+  const pm=3*i2*i2*rl;
+  const tq=N>0?pm/(2*Math.PI*N/60):3*i2*i2*r2/(2*Math.PI*ns/60);
+  const p1=S3*vo*il*cphi,eff=Math.min(100,Math.max(0,p1>0?pm/p1*100:0));
+  const sp=(r2+zo1)>0?r2/(r2+zo1):0,pmx=(ro1+zo1)>0?3*v*v/(2*ro1+2*zo1):0;
+  return {ns,poles,cos_phi0:cp0,iw,im,rm,xm,r1,ro1,r2_prime:r2,zo1,xo1,x1,x2_prime:x2,rl_prime:rl,i2_prime:i2,
+    stator_current_phase:i1,stator_current_line:il,cos_phi:cphi,rotor_speed:N,pm,torque:tq,p1,efficiency:eff,sp,pm_max:pmx};
+}
+
+function read(){
+  const c={};
+  for(const k of F){
+    const t=$(k).value.trim();
+    if(!t)return{e:`Field '${LBL[k]}' cannot be empty.`};
+    const n=Number(t);
+    if(!isFinite(n))return{e:`Field '${LBL[k]}' must be a valid number.`};
+    if(n<0)return{e:`Field '${LBL[k]}' cannot be negative.`};
+    if(n===0)return{e:`Field '${LBL[k]}' cannot be zero.`};
+    c[k]=n;
+  }
+  if(c.slip_pct<0.1||c.slip_pct>100)return{e:"Slip percentage must be between 0.1% and 100.0%."};
+  const a0=Math.sqrt(3)*c.vo*c.io;if(c.wo>a0)return{e:`No-load power Wo (${c.wo} W) cannot exceed apparent power (${a0.toFixed(2)} VA).`};
+  const a1=Math.sqrt(3)*c.vsc*c.isc;if(c.wsc>a1)return{e:`Blocked-rotor power Wsc (${c.wsc} W) cannot exceed apparent power (${a1.toFixed(2)} VA).`};
+  return{c};
+}
+
+const ROWS=[["Synchronous speed (Ns)","ns","RPM"],["Number of poles","poles",""],["No-load power factor (cos φ0)","cos_phi0",""],
+["Working component current (Iw)","iw","A"],["Magnetising component current (Im)","im","A"],["Core-loss resistance (Rm)","rm","Ω"],["Magnetising reactance (Xm)","xm","Ω"],
+["Stator resistance (R1)","r1","Ω"],["Rotor resistance (R2′)","r2_prime","Ω"],["Equivalent resistance (Ro1)","ro1","Ω"],["Equivalent impedance (Zo1)","zo1","Ω"],["Equivalent reactance (Xo1)","xo1","Ω"],
+["Rotor current referred to stator (I2′)","i2_prime","A"],["Stator phase current (I1)","stator_current_phase","A"],["Stator line current","stator_current_line","A"],
+["Input power factor (cos φ)","cos_phi",""],["Rotor speed at operating slip (N)","rotor_speed","RPM"],["Mechanical power developed (Pm)","pm","W"],
+["Developed torque (T)","torque","N·m"],["Input power (P1)","p1","W"],["Efficiency (η)","efficiency","%"],["Slip for max power output (Sp)","sp",""],["Maximum mechanical power (Pm_max)","pm_max","W"]];
+const fmt=v=>!isFinite(v)?"∞":Math.abs(v)>=100?v.toFixed(2):v.toFixed(4);
+function table(r){
+  $("res").innerHTML=ROWS.map(([l,k,u])=>`<tr><td>${l}</td><td>${r?fmt(r[k]):"–"} <span class="u">${u}</span></td></tr>`).join("");
+}
+
+function circuit(r){
+  const O=" Ω",g=k=>r?fmt(r[k])+O:"";
+  const T=80,B=250,n=330,R=590;let s="";
+  const L=(a,b,c,d)=>s+=`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="var(--ink)" stroke-width="2"/>`;
+  const box=(x,y,w,h)=>s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>`;
+  const hind=(x)=>s+=`<path d="M${x} ${T}`+"a10 10 0 0 1 20 0".repeat(4)+`" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  const arr=(a,b,c,d)=>s+=`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#ah)"/>`;
+  const tx=(x,y,t,sz=22,cls="",an="middle")=>s+=`<text x="${x}" y="${y}" font-size="${sz}" text-anchor="${an}" class="${cls}">${t}</text>`;
+  const sub=(a,b)=>`${a}<tspan font-size="15" dy="5">${b}</tspan>`;
+  s+=`<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink)"/></marker></defs>`;
+  for(const y of[T,B])s+=`<circle cx="30" cy="${y}" r="7" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>`;
+  L(37,T,120,T);L(37,B,R,B);arr(55,110,55,220);tx(88,170,sub("V",1));
+  box(120,71,60,18);tx(150,44,sub("R",1));tx(150,60,g("r1"),12,"v");L(180,T,210,T);
+  hind(210);tx(250,38,sub("X",1));tx(250,54,g("x1"),12,"v");L(290,T,n,T);
+  arr(210,106,270,106);tx(240,128,sub("I",1),20);
+  L(n,T,n,110);s+=`<path d="M${n} 110`+"a10 10 0 0 0 0 20".repeat(4)+`" fill="none" stroke="var(--ink)" stroke-width="2"/>`;L(n,190,n,B);
+  for(const y of[T,B])s+=`<circle cx="${n}" cy="${y}" r="5" fill="var(--ink)"/>`;
+  tx(280,150,sub("X","m"),22,"","end");tx(280,168,g("xm"),12,"v","end");
+  arr(358,115,358,165);tx(380,146,sub("I","m"),20);
+  L(n,T,370,T);hind(370);tx(410,38,sub("X",2));tx(410,54,g("x2_prime"),12,"v");L(450,T,480,T);
+  arr(440,106,380,106);tx(410,128,sub("I",2),20);
+  box(480,71,60,18);tx(510,44,sub("R",2));tx(510,60,g("r2_prime"),12,"v");L(540,T,R,T);
+  L(R,T,R,131);box(581,131,18,78);L(R,209,R,B);
+  s+=`<line x1="566" y1="222" x2="614" y2="120" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#ah)"/>`;
+  tx(556,166,sub("R",2)+" (1−s)/s",21,"","end");tx(556,186,g("rl_prime"),12,"v","end");
+  $("ckt").innerHTML=s;
+}
+
+let charts=[];
+function graphs(c,conn,f){
+  const sl=[];for(let i=0;i<200;i++)sl.push(0.05+i*(9.95/199));for(let i=1;i<200;i++)sl.push(10+i*(90/199));
+  const rs=sl.map(x=>calc(c,conn,x,f));
+  let k=0;rs.forEach((r,i)=>{if(r.pm>rs[k].pm)k=i});
+  const A=rs.slice(0,k+1),pt=(xs,ys)=>xs.map((x,i)=>({x,y:ys[i]}));
+  const pw=A.map(r=>r.pm),cs=getComputedStyle(document.documentElement);
+  const ink=cs.getPropertyValue("--mute").trim(),grid=cs.getPropertyValue("--grid").trim();
+  const defs=[["c1","Torque – Speed","Speed (RPM)","Torque (N·m)",pt(rs.map(r=>r.rotor_speed),rs.map(r=>r.torque)),"#4aa3ff"],
+   ["c2","Efficiency – Output Power","Output power Pm (W)","Efficiency (%)",pt(pw,A.map(r=>r.efficiency)),"#3fb86b"],
+   ["c3","Stator Current – Output Power","Output power Pm (W)","Line current (A)",pt(pw,A.map(r=>r.stator_current_line)),"#e8992a"],
+   ["c4","Power Factor – Output Power","Output power Pm (W)","cos φ",pt(pw,A.map(r=>r.cos_phi)),"#b57bff"]];
+  charts.forEach(x=>x.destroy());
+  charts=defs.map(([id,t,xl,yl,d,col])=>new Chart($(id),{type:"line",data:{datasets:[{data:d,borderColor:col,borderWidth:2,pointRadius:0,tension:.2}]},
+   options:{responsive:true,maintainAspectRatio:false,animation:false,parsing:false,
+    plugins:{legend:{display:false},title:{display:true,text:t,color:ink}},
+    scales:{x:{type:"linear",title:{display:true,text:xl,color:ink},ticks:{color:ink},grid:{color:grid}},
+            y:{title:{display:true,text:yl,color:ink},ticks:{color:ink},grid:{color:grid}}}}}));
+}
+
+let last=null;
+function run(){
+  const {c,e}=read();$("err").textContent=e||"";
+  if(e)return;
+  const conn=document.querySelector('input[name=conn]:checked').value,f=+$("freq").value;
+  const r=calc(c,conn,c.slip_pct,f);last={c,conn,f};
+  table(r);circuit(r);if(!$("t3").hidden)graphs(c,conn,f);
+}
+function tab(id){
+  for(const b of document.querySelectorAll(".tabs button")){b.setAttribute("aria-selected",b.dataset.t===id);$(b.dataset.t).hidden=b.dataset.t!==id}
+  if(id==="t3"&&last)graphs(last.c,last.conn,last.f);
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.t));
+$("calc").onclick=run;
+$("clear").onclick=()=>{F.forEach(k=>$(k).value=DEF[k]);document.querySelector('input[name=conn][value=Delta]').checked=true;$("freq").value="50";$("err").textContent="";run()};
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName==="INPUT")run()});
+table(null);circuit(null);run();
+</script>
+</body>
+</html>
